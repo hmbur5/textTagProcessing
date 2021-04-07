@@ -1,6 +1,6 @@
 '''
 Each function returns a list of images where each list contains
-[image url, date upload, image size, account, title/description, date accessed]
+[image url, date upload, image size, dimensions, extension, location, account, title/description, date accessed]
 '''
 
 from datetime import datetime
@@ -16,9 +16,9 @@ def flickr_download(search):
 
     flickr = FlickrAPI(FLICKR_PUBLIC, FLICKR_SECRET, format='parsed-json')
     # extras for photo search (can include geo tag, date etc)
-    extras = 'url_o, url_c, date_taken, owner_name, o_dim'
+    extras = 'url_o, url_c, date_taken, owner_name, o_dim, geo'
 
-    image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
+    image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
     for pageNumber in [0,1]:
         # get flickr photos based on search text
         photoSearch = flickr.photos.search(text=search, per_page=250, page=pageNumber, extras=extras)
@@ -26,11 +26,11 @@ def flickr_download(search):
         for element in photos['photo']:
             try:
                 image_url = element['url_o']
-                size = [element['height_o'], element['width_o']]
+                dimensions = [element['height_o'], element['width_o']]
             except:
                 try:
                     image_url = element['url_c']
-                    size = [element['height_c'], element['width_c']]
+                    dimensions = [element['height_c'], element['width_c']]
                 except:
                     continue
 
@@ -41,12 +41,18 @@ def flickr_download(search):
             owner = element['ownername'] + ' (' +element['owner'] +')'
             info = flickr.photos.getInfo(photo_id = photo_id)
             description = 'Title: ' + title + '\nDescription: '+ info['photo']['description']['_content']
+            if element['longitude']!=0 or element['latitude']!=0:
+                location = 'long: '+element['longitude']+', lat: '+element['latitude']
+            else:
+                location = 'NA'
+            size = 'NA'
+            extension = 'NA'
 
             date_accessed = datetime.now()
             date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-            print([image_url, date, size, owner, description, date_accessed])
-            image_data.append([image_url, date, size, owner, description, date_accessed])
+            print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+            image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
             if len(image_data)>250:
                 break
@@ -60,11 +66,13 @@ def flickr_download(search):
 
 def instagram_download(search):
     from instaloader import Instaloader
+    import re
 
     loader = Instaloader()
+    loader.interactive_login('hannahhburke')
 
     posts = loader.get_hashtag_posts(search)
-    image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
+    image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
     for post in posts:
         time.sleep(10)
 
@@ -77,9 +85,22 @@ def instagram_download(search):
         date_accessed = datetime.now()
         date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-        print([image_url, date, '', owner, description, date_accessed])
-        image_data.append([image_url, date, '', owner, description, date_accessed])
+        size='NA'
+        dimensions = 'NA'
+        extension = 'NA'
+        if post.location != None:
+            loc = str(post.location)
+            long = re.findall(r'lng=  \-*\d+\.*\d+',loc)[0]
+            long = long.replace('lng=','')
+            lat = re.findall(r'lat=  \-*\d+\.*\d+',loc)[0]
+            print(lat.replace('lat=',''))
+            location = 'long: ' + long + ', lat: ' + lat
 
+        else:
+            location = 'NA'
+
+        print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+        image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
         if len(image_data)>250:
             break
@@ -92,62 +113,56 @@ def instagram_download(search):
 
 
 
-def reddit_download(search, search2 = ''):
+def reddit_download(search):
     import praw
     import re
 
     reddit = praw.Reddit(client_id='TcM6ROJWy6s8ig', client_secret='vJ89hRTSvhOiKoHePbBUq5TPf3sHAw', user_agent='canetoad')
     all = reddit.subreddit('all')
 
-    image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
-    search_terms = [search, search.replace(' ', '')]
-    if search2!='':
-        # since reddit limits search results, you may need an alternative search term to boost results
-        search_terms+=[search2, search2.replace(' ', '')]
-    sort_method = ['relevance', 'new', 'hot', 'top', 'comments']
-    image_urls = []
+    from psaw import PushshiftAPI
+
+    api = PushshiftAPI(reddit)
+
+    image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
+    search_terms = [search, 'german yellowjacket']
     for search_term in search_terms:
-        for method in sort_method:
-            if len(image_data)>350:
+        search_results = api.search_submissions(q=search_term, limit=5000)
+        for b in search_results:
+            owner = b.author
+            description = b.title
+            date = datetime.utcfromtimestamp(int(b.created_utc))
+            date = date.strftime('%Y-%m-%d %H:%M:%S')
+            date_accessed = datetime.now()
+            date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
+
+            dimensions='NA'
+            size = 'NA'
+            extension = 'NA'
+            location = 'NA'
+
+            try:
+                #if image urls are in metadata
+                for key in b.media_metadata.keys():
+                    # add image url for each image
+                    image_url = b.media_metadata[key]['s']['u']
+                    size = [b.media_metadata[key]['s']['y'], b.media_metadata[key]['s']['x']]
+
+                    print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+
+
+            # otherwise check if submission url is an image
+            except AttributeError:
+                image_url = b.url
+                # if the url is an image, it will end in .jpg etc, so use regex to check
+                # this will still include some other urls but can be checked later
+                if len(re.findall('\\.\w+$', image_url))>=1:
+                    print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+
+            if len(image_data) > 400:
                 break
-            search_results = all.search(search_term, sort=method, limit=5000)
-            count = 0
-            for b in search_results:
-                count+=1
-                print(count)
-                owner = b.author
-                description = b.title
-                date = datetime.utcfromtimestamp(int(b.created_utc))
-                date = date.strftime('%Y-%m-%d %H:%M:%S')
-                date_accessed = datetime.now()
-                date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
-
-                try:
-                    #if image urls are in metadata
-                    for key in b.media_metadata.keys():
-                        # add image url for each image
-                        image_url = b.media_metadata[key]['s']['u']
-                        size = [b.media_metadata[key]['s']['y'], b.media_metadata[key]['s']['x']]
-
-
-                        if image_url not in image_urls:
-                            print([image_url, date, size, owner, description, date_accessed])
-                            image_urls.append(image_url)
-                            image_data.append([image_url, date, size, owner, description, date_accessed])
-
-                # otherwise check if submission url is an image
-                except AttributeError:
-                    image_url = b.url
-                    # if the url is an image, it will end in .jpg etc, so use regex to check
-                    # this will still include some other urls but can be checked later
-                    if len(re.findall('\\.\w+$', image_url))>=1:
-                        if image_url not in image_urls:
-                            print([image_url, date, '', owner, description, date_accessed])
-                            image_urls.append(image_url)
-                            image_data.append([image_url, date, '', owner, description, date_accessed])
-
-                if len(image_data) > 350:
-                    break
 
     # save image data to file
     file_name = 'reddit ' + search
@@ -159,7 +174,7 @@ def reddit_download(search, search2 = ''):
 def ala_download(search):
     '''
     The raw file comes from ALA using a download url in the following form (change search field for different species):
-    https://biocache-ws.ala.org.au/ws/occurrences/offline/download*?q=cane%20toad&email=hmbur5%40student.monash.edu&fields=all_image_url
+    hhttps://biocache-ws.ala.org.au/ws/occurrences/offline/download*?q=cane%20toad&email=hmbur5%40student.monash.edu&fields=all_image_url,occurrence_date,user_id,latitude,longitude
     which sends a link to your email.
     This image url is then put into the form https://images.ala.org.au/store/b/8/a/0/d6ea9ad8-0293-4144-b40e-9087eb400a8b/original
     where the first 4 digits are the reverse of the last 4 digits from the giant 'url'
@@ -170,7 +185,7 @@ def ala_download(search):
     url_id_list = []
     with open(file_dir, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
-        image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
+        image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
         for lines in csv_reader:
             url_field = lines[0]
             if url_field != '' and 'image' not in url_field:
@@ -184,13 +199,30 @@ def ala_download(search):
                 image_url = url_string
 
                 date = lines[1]
+                if date == '':
+                    date='NA'
                 owner = lines[2]
+                if owner == '':
+                    owner = 'NA'
+                lat = lines[3]
+                long = lines[4]
+                if lat!= '' or long!='':
+                    location = 'long: ' + long + ', lat: ' + lat
+                else:
+                    location = 'NA'
                 date_accessed = datetime.now()
                 date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-                image_data.append([image_url, date, '', owner, '', date_accessed])
+                size = 'NA'
+                dimensions = 'NA'
+                extension = 'NA'
+                description = 'NA'
 
-                if len(image_data)>250:
+                print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                image_data.append(
+                    [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+
+                if len(image_data)>500:
                     break
 
     # save image data to file
@@ -202,7 +234,7 @@ def ala_download(search):
 
 def inaturalist_download(search):
     file_dir = 'image_metadata/inaturalist raw/' + search + '.csv'
-    image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
+    image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
     with open(file_dir, "r") as csv_file:
         csv_reader = csv.reader(csv_file, delimiter=',')
         for lines in csv_reader:
@@ -211,11 +243,20 @@ def inaturalist_download(search):
                 owner = lines[6]
                 date = lines[2]
                 description = lines[15]
+                lat = lines[21]
+                long = lines[22]
+                location = 'long: ' + long + ', lat: ' + lat
 
                 date_accessed = datetime.now()
                 date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-                image_data.append([image_url, date, '', owner, description, date_accessed])
+                size = 'NA'
+                dimensions = 'NA'
+                extension = 'NA'
+
+                print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                image_data.append(
+                    [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
                 if len(image_data)>250:
                     break
@@ -239,7 +280,7 @@ def random_download():
     # extras for photo search (can include geo tag, date etc)
     extras = 'url_o, url_c, date_taken, owner_name, o_dim'
 
-    image_data = [['image url', 'date taken', 'image size', 'account', 'description', 'date accessed']]
+    image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
 
     while len(image_data)<=250:
         randint = random.randrange(1577836800, 1609459200)
@@ -251,10 +292,17 @@ def random_download():
         for element in photos['photo']:
             try:
                 image_url = element['url_o']
-                size = [element['height_o'], element['width_o']]
+                dimensions = [element['height_o'], element['width_o']]
             except:
                 image_url = element['url_c']
-                size = [element['height_c'], element['width_c']]
+                dimensions = [element['height_c'], element['width_c']]
+
+            if element['longitude']!=0 or element['latitude']!=0:
+                location = 'long: '+element['longitude']+', lat: '+element['latitude']
+            else:
+                location = 'NA'
+            size = 'NA'
+            extension = 'NA'
 
 
             photo_id = element['id']
@@ -267,8 +315,9 @@ def random_download():
             date_accessed = datetime.now()
             date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-            print([image_url, date, size, owner, description, date_accessed])
-            image_data.append([image_url, date, size, owner, description, date_accessed])
+            print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+            image_data.append(
+                [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
             break
 
@@ -278,27 +327,134 @@ def random_download():
         wr = csv.writer(myfile, delimiter=',')
         wr.writerows(image_data)
 
+def twitter_download(search):
+    import time
+    import selenium
+    from selenium import webdriver
+    from selenium.webdriver.common.keys import Keys
+    from webdriver_manager.chrome import ChromeDriverManager
+
+    browser = webdriver.Chrome(ChromeDriverManager().install())
+
+    image_data = [['image url', 'date taken', 'image size','dimensions','extension','location', 'account', 'description', 'date accessed']]
+
+    # iterate through searches within certain dates to get enough results
+    for year in [2021,2020, 2019, 2018, 2017, 2016,2015,2014,2013,2012,2011,2010]:
+        for month in [1,2,3,4,5,6,7,8,9,10,11,12]:
+            for day in [1,16]:
+                url = 'https://twitter.com/search?q=' + search + '%20until%3A' + str(year) + '-' + str(
+                    month) + '-' + str(day + 14) + '%20since%3A' + str(year) + '-' + str(month) + '-' + str(
+                    day) + '&src=typed_query&f=image'
+
+                if year ==2021 and month>4:
+                    continue
+
+                # download the page as html for parsing
+                try:
+                    browser.get(url)
+                except selenium.common.exceptions.WebDriverException:
+                    time.sleep(10)
+                    browser.get(url)
+
+                time.sleep(1)
+                body = browser.find_element_by_tag_name('body')
+                for _ in range(10):
+                    body.send_keys(Keys.PAGE_DOWN)
+                    time.sleep(0.2)
+                from bs4 import BeautifulSoup
+                soup = BeautifulSoup(browser.page_source, 'html.parser')
+                try:
+                    tags = soup.find('div', attrs={'aria-label': 'Timeline: Search timeline'})
+                    tags = tags.contents[0]
+                    tweets = tags.contents
+                    for tweet in tweets:
+                        try:
+                            content = tweet.contents
+                            while len(content)==1:
+                                content = content[0].contents
+                            while len(content)==2:
+                                data = content[0].contents
+                                content = content[1].contents
+                            if len(content)>2:
+                                image = content[1].findAll('img')
+                                image_url = image[0]['src']
+                                image_url.replace('amp;','')
+                                text = content[0]
+                                try:
+                                    text= text.content[0]
+                                    text= text.content[0]
+                                    text= text.content[0]
+                                except Exception as e:
+                                    pass
+                                description = text.get_text()
+
+
+                                while len(data)<3:
+                                    data = data[0].contents
+                                username = data[0]
+                                try:
+                                    username = username.content[-1]
+                                    username = username.content[-1]
+                                    username = username.content[-1]
+                                    username = username.content[-1]
+                                    username = username.content[-1]
+                                    username = username.content[-1]
+                                except:
+                                    pass
+                                username = username.get_text()
+                                date = data[2]
+                                date = date.find('time')
+                                date = date['datetime']
+
+                                date_accessed = datetime.now()
+                                date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
+
+                                dimensions = 'NA'
+                                size = 'NA'
+                                extension = 'NA'
+                                location = 'NA'
+
+                                print([image_url, date, size, dimensions, extension, location, username, description,
+                                       date_accessed])
+                                image_data.append(
+                                    [image_url, date, size, dimensions, extension, location, username, description,
+                                     date_accessed])
+
+                                if len(image_data)>300:
+                                    break
+                        except Exception as e:
+                            print(e)
+                    print(len(image_data))
+                except Exception as e:
+                    print(e)
+
+
+
+
+
+
 
 ###cane toad###
 #ala_download('cane toad')
-#reddit_download('cane toad',search2='Rhinella marina')
+#reddit_download('cane toad')
 #instagram_download('canetoad')
 #flickr_download('cane toad')
 #inaturalist_download('cane toad')
+twitter_download('canetoad')
 
 ###german wasp###
 #ala_download('german wasp')
-#reddit_download('german wasp',search2='Vespula germanica')
+#reddit_download('german wasp')
 #instagram_download('germanwasp')
 #flickr_download('german wasp')
 #inaturalist_download('german wasp')
 
 ###camel###
 #ala_download('camel')
-#reddit_download('camel',search2='Camelus dromedarius')
+#reddit_download('camel')
 #instagram_download('camel')
 #flickr_download('camel')
-inaturalist_download('camel')
+#inaturalist_download('camel')
 
 ###random###
-#random_download()
+random_download()
