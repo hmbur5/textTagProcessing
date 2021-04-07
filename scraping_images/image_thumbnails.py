@@ -54,6 +54,8 @@ for file_name in files:
 
                     img.save("image_metadata/thumbnails/"+file_name+"/"+image_url+'.png')
                     new_rows.append(new_row)
+                    if len(new_rows)>250 and 'ala' not in file_name:
+                        break
                 except Exception as e:
                     print(e)
             else:

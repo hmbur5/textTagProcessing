@@ -89,12 +89,17 @@ def instagram_download(search):
         dimensions = 'NA'
         extension = 'NA'
         if post.location != None:
-            loc = str(post.location)
-            long = re.findall(r'lng=  \-*\d+\.*\d+',loc)[0]
-            long = long.replace('lng=','')
-            lat = re.findall(r'lat=  \-*\d+\.*\d+',loc)[0]
-            print(lat.replace('lat=',''))
-            location = 'long: ' + long + ', lat: ' + lat
+            try:
+                loc = str(post.location)
+                long = re.findall(r'lng=\-*\d+\.*\d+',loc)[0]
+                long = long.replace('lng=','')
+                lat = re.findall(r'lat=\-*\d+\.*\d+',loc)[0]
+                lat = lat.replace('lat=','')
+                location = 'long: ' + long + ', lat: ' + lat
+            except Exception as e:
+                print(post.location)
+                print(e)
+                location = 'NA'
 
         else:
             location = 'NA'
@@ -174,7 +179,7 @@ def reddit_download(search):
 def ala_download(search):
     '''
     The raw file comes from ALA using a download url in the following form (change search field for different species):
-    hhttps://biocache-ws.ala.org.au/ws/occurrences/offline/download*?q=cane%20toad&email=hmbur5%40student.monash.edu&fields=all_image_url,occurrence_date,user_id,latitude,longitude
+    https://biocache-ws.ala.org.au/ws/occurrences/offline/download*?q=cane%20toad&email=hmbur5%40student.monash.edu&fields=all_image_url,occurrence_date,user_id,latitude,longitude
     which sends a link to your email.
     This image url is then put into the form https://images.ala.org.au/store/b/8/a/0/d6ea9ad8-0293-4144-b40e-9087eb400a8b/original
     where the first 4 digits are the reverse of the last 4 digits from the giant 'url'
@@ -425,6 +430,8 @@ def twitter_download(search):
                         except Exception as e:
                             print(e)
                     print(len(image_data))
+                except AttributeError:
+                    time.sleep(120)
                 except Exception as e:
                     print(e)
 
@@ -437,24 +444,24 @@ def twitter_download(search):
 ###cane toad###
 #ala_download('cane toad')
 #reddit_download('cane toad')
-#instagram_download('canetoad')
-#flickr_download('cane toad')
-#inaturalist_download('cane toad')
+instagram_download('canetoad')
+flickr_download('cane toad')
+inaturalist_download('cane toad')
 twitter_download('canetoad')
 
 ###german wasp###
-#ala_download('german wasp')
-#reddit_download('german wasp')
-#instagram_download('germanwasp')
-#flickr_download('german wasp')
-#inaturalist_download('german wasp')
+ala_download('german wasp')
+reddit_download('german wasp')
+instagram_download('germanwasp')
+flickr_download('german wasp')
+inaturalist_download('german wasp')
 
-###camel###
-#ala_download('camel')
-#reddit_download('camel')
-#instagram_download('camel')
-#flickr_download('camel')
-#inaturalist_download('camel')
+###rabbit###
+ala_download('rabbit')
+reddit_download('rabbit')
+instagram_download('rabbit')
+flickr_download('rabbit')
+#inaturalist_download('rabbit')
 
 ###random###
 random_download()

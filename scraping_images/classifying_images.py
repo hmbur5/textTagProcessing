@@ -163,6 +163,8 @@ for filename in files:
             else:
                 new_row = ['image url','microsoft azure labels','gluon labels','google label description','google object detection']
                 new_rows.append(new_row)
+            if len(new_rows)>20:
+                break
 
 
     with open(directory + 'classified/' +filename + '.csv', "w") as csv_file:
