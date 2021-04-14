@@ -134,8 +134,6 @@ for filename in os.listdir(directory):
 
 for filename in files:
     print(filename)
-    if 'flickr german wasp' not in filename:
-        continue
 
     filename = filename.replace('_saved','')
 

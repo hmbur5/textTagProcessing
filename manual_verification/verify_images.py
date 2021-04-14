@@ -65,8 +65,6 @@ for filename in files:
             wr.writerows(new_rows)
         continue
 
-    if 'flickr rabbit' not in filename:
-        continue
 
     existing_rows = []
     try:

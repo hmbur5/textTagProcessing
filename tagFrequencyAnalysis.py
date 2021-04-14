@@ -176,6 +176,7 @@ for filename in os.listdir(directory):
         continue
 
 files.sort()
+print(files)
 
 comparison = []
 for filename in files:
@@ -184,7 +185,12 @@ for filename in files:
         continue
 
     if 'ala' in filename:
-        authoritative = filename
+        # if looking at rabbit, use the validated ala file
+        if 'rabbit' in filename:
+            if 'validated' in filename:
+                authoritative = filename
+        else:
+            authoritative = filename
     elif 'random' in filename:
         rand = filename
     else:
