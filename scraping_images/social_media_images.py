@@ -17,9 +17,10 @@ def flickr_download(search):
     flickr = FlickrAPI(FLICKR_PUBLIC, FLICKR_SECRET, format='parsed-json')
     # extras for photo search (can include geo tag, date etc)
     extras = 'url_o, url_c, date_taken, owner_name, o_dim, geo'
+    image_url_list = []
 
     image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
-    for pageNumber in [0,1]:
+    for pageNumber in [1,2]:
         # get flickr photos based on search text
         photoSearch = flickr.photos.search(text=search, per_page=250, page=pageNumber, extras=extras)
         photos = photoSearch['photos']
@@ -51,10 +52,15 @@ def flickr_download(search):
             date_accessed = datetime.now()
             date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
+            if image_url not in image_url_list:
+                image_url_list.append(image_url)
+            else:
+                continue
+
             print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
             image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
-            if len(image_data)>250:
+            if len(image_data)>350:
                 break
 
     # save image data to file
@@ -74,40 +80,47 @@ def instagram_download(search):
     posts = loader.get_hashtag_posts(search)
     image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
     for post in posts:
-        time.sleep(10)
+        try:
+            image_url = post.url
+            date = post.date
+            date = date.strftime('%Y-%m-%d %H:%M:%S')
+            owner = post.owner_username
+            notUnique = False
+            for previous in image_data:
+                if owner == previous[6]:
+                    notUnique = True
+            if notUnique:
+                continue
+            description = post.caption
 
-        image_url = post.url
-        date = post.date
-        date = date.strftime('%Y-%m-%d %H:%M:%S')
-        owner = post.owner_username
-        description = post.caption
+            date_accessed = datetime.now()
+            date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
 
-        date_accessed = datetime.now()
-        date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
+            size='NA'
+            dimensions = 'NA'
+            extension = 'NA'
+            if post.location != None:
+                try:
+                    loc = str(post.location)
+                    long = re.findall(r'lng=\-*\d+\.*\d+',loc)[0]
+                    long = long.replace('lng=','')
+                    lat = re.findall(r'lat=\-*\d+\.*\d+',loc)[0]
+                    lat = lat.replace('lat=','')
+                    location = 'long: ' + long + ', lat: ' + lat
+                except Exception as e:
+                    print(post.location)
+                    print(e)
+                    location = 'NA'
 
-        size='NA'
-        dimensions = 'NA'
-        extension = 'NA'
-        if post.location != None:
-            try:
-                loc = str(post.location)
-                long = re.findall(r'lng=\-*\d+\.*\d+',loc)[0]
-                long = long.replace('lng=','')
-                lat = re.findall(r'lat=\-*\d+\.*\d+',loc)[0]
-                lat = lat.replace('lat=','')
-                location = 'long: ' + long + ', lat: ' + lat
-            except Exception as e:
-                print(post.location)
-                print(e)
+            else:
                 location = 'NA'
-
-        else:
-            location = 'NA'
+        except KeyError:
+            pass
 
         print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
         image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
-        if len(image_data)>250:
+        if len(image_data)>300:
             break
 
     # save image data to file
@@ -125,6 +138,8 @@ def reddit_download(search):
     reddit = praw.Reddit(client_id='TcM6ROJWy6s8ig', client_secret='vJ89hRTSvhOiKoHePbBUq5TPf3sHAw', user_agent='canetoad')
     all = reddit.subreddit('all')
 
+    image_url_list = []
+
     from psaw import PushshiftAPI
 
     api = PushshiftAPI(reddit)
@@ -134,6 +149,9 @@ def reddit_download(search):
     for search_term in search_terms:
         search_results = api.search_submissions(q=search_term, limit=5000)
         for b in search_results:
+            # exclude over 18 content
+            if b.over_18 == True:
+                continue
             owner = b.author
             description = b.title
             date = datetime.utcfromtimestamp(int(b.created_utc))
@@ -153,6 +171,10 @@ def reddit_download(search):
                     image_url = b.media_metadata[key]['s']['u']
                     size = [b.media_metadata[key]['s']['y'], b.media_metadata[key]['s']['x']]
 
+                    if image_url not in image_url_list:
+                        image_url_list.append(image_url)
+                    else:
+                        continue
                     print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
                     image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
@@ -163,6 +185,10 @@ def reddit_download(search):
                 # if the url is an image, it will end in .jpg etc, so use regex to check
                 # this will still include some other urls but can be checked later
                 if len(re.findall('\\.\w+$', image_url))>=1:
+                    if image_url not in image_url_list:
+                        image_url_list.append(image_url)
+                    else:
+                        continue
                     print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
                     image_data.append([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
@@ -227,7 +253,7 @@ def ala_download(search):
                 image_data.append(
                     [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
-                if len(image_data)>500:
+                if len(image_data)>550:
                     break
 
     # save image data to file
@@ -263,7 +289,7 @@ def inaturalist_download(search):
                 image_data.append(
                     [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
-                if len(image_data)>250:
+                if len(image_data)>300:
                     break
 
     # save image data to file
@@ -283,11 +309,11 @@ def random_download():
 
     flickr = FlickrAPI(FLICKR_PUBLIC, FLICKR_SECRET, format='parsed-json')
     # extras for photo search (can include geo tag, date etc)
-    extras = 'url_o, url_c, date_taken, owner_name, o_dim'
+    extras = 'url_o, url_c, date_taken, owner_name, o_dim, geo'
 
     image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
 
-    while len(image_data)<=250:
+    while len(image_data)<=300:
         randint = random.randrange(1577836800, 1609459200)
         random_date_end = datetime.utcfromtimestamp(randint)
         random_date_start = datetime.utcfromtimestamp(randint-5)
@@ -299,8 +325,11 @@ def random_download():
                 image_url = element['url_o']
                 dimensions = [element['height_o'], element['width_o']]
             except:
-                image_url = element['url_c']
-                dimensions = [element['height_c'], element['width_c']]
+                try:
+                    image_url = element['url_c']
+                    dimensions = [element['height_c'], element['width_c']]
+                except:
+                    pass
 
             if element['longitude']!=0 or element['latitude']!=0:
                 location = 'long: '+element['longitude']+', lat: '+element['latitude']
@@ -344,7 +373,7 @@ def twitter_download(search):
     image_data = [['image url', 'date taken', 'image size','dimensions','extension','location', 'account', 'description', 'date accessed']]
 
     # iterate through searches within certain dates to get enough results
-    for year in [2021,2020, 2019, 2018, 2017, 2016,2015,2014,2013,2012,2011,2010]:
+    for year in [2021,2020, 2019, 2018, 2017, 2016,2015,2014,2013,2012]:
         for month in [1,2,3,4,5,6,7,8,9,10,11,12]:
             for day in [1,16]:
                 url = 'https://twitter.com/search?q=' + search + '%20until%3A' + str(year) + '-' + str(
@@ -435,8 +464,11 @@ def twitter_download(search):
                 except Exception as e:
                     print(e)
 
-
-
+    # save image data to file
+    file_name = 'twitter ' +search
+    with open('image_metadata/' + file_name + '.csv', 'w') as myfile:
+        wr = csv.writer(myfile, delimiter=',')
+        wr.writerows(image_data)
 
 
 
@@ -444,24 +476,28 @@ def twitter_download(search):
 ###cane toad###
 #ala_download('cane toad')
 #reddit_download('cane toad')
-instagram_download('canetoad')
-flickr_download('cane toad')
-inaturalist_download('cane toad')
-twitter_download('canetoad')
+#instagram_download('canetoad')
+#flickr_download('cane toad')
+#inaturalist_download('cane toad')
+#twitter_download('canetoad')
 
 ###german wasp###
-ala_download('german wasp')
-reddit_download('german wasp')
-instagram_download('germanwasp')
-flickr_download('german wasp')
-inaturalist_download('german wasp')
+#ala_download('german wasp')
+#reddit_download('german wasp')
+#instagram_download('germanwasp')
+#flickr_download('german wasp')
+#inaturalist_download('german wasp')
+#twitter_download('german wasp')
+
 
 ###rabbit###
-ala_download('rabbit')
-reddit_download('rabbit')
-instagram_download('rabbit')
-flickr_download('rabbit')
+#ala_download('rabbit')
+#reddit_download('rabbit')
+#instagram_download('rabbit')
+#flickr_download('rabbit')
 #inaturalist_download('rabbit')
+#twitter_download('rabbit')
+
 
 ###random###
-random_download()
+#random_download()
