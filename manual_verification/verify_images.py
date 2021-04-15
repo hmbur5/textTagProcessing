@@ -65,7 +65,6 @@ for filename in files:
             wr.writerows(new_rows)
         continue
 
-
     existing_rows = []
     try:
         with open('manual_verification/verified images/' +filename + '.csv', "r") as csv_file:

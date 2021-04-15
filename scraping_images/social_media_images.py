@@ -75,11 +75,12 @@ def instagram_download(search):
     import re
 
     loader = Instaloader()
-    loader.interactive_login('hannahhburke')
+    loader.interactive_login('hanbooboo1')
 
     posts = loader.get_hashtag_posts(search)
     image_data = [['image url', 'date taken', 'image size', 'dimensions','extension','location','account', 'description', 'date accessed']]
     for post in posts:
+        time.sleep(10)
         try:
             image_url = post.url
             date = post.date
@@ -493,7 +494,7 @@ def twitter_download(search):
 ###rabbit###
 #ala_download('rabbit')
 #reddit_download('rabbit')
-#instagram_download('rabbit')
+instagram_download('wildrabbit')
 #flickr_download('rabbit')
 #inaturalist_download('rabbit')
 #twitter_download('rabbit')

@@ -183,6 +183,8 @@ for filename in files:
 
     if 'rabbit' not in filename and 'rand' not in filename:
         continue
+    if 'instagram' in filename and 'wild' not in filename:
+        continue
 
     if 'ala' in filename:
         # if looking at rabbit, use the validated ala file
@@ -219,5 +221,5 @@ plt.plot([0,1],[0,1])
 plt.ylabel('Observed fraction of desired images')
 plt.xlabel('Predicted fraction of desired images')
 plt.title('Rabbit')
-plt.annotate('y = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0,0.75])
+plt.annotate('y = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0.75,0])
 plt.show()
