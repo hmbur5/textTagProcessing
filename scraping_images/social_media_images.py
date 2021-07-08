@@ -300,7 +300,7 @@ def inaturalist_download(search):
         wr.writerows(image_data)
 
 
-def random_download():
+def random_download_flickr():
     import random
     import datetime as datetime_orig
     from flickrapi import FlickrAPI
@@ -358,6 +358,88 @@ def random_download():
 
     # save image data to file
     file_name = 'random'
+    with open('image_metadata/' + file_name + '.csv', 'w') as myfile:
+        wr = csv.writer(myfile, delimiter=',')
+        wr.writerows(image_data)
+
+
+def random_download_reddit():
+    import random
+    import datetime as datetime_orig
+    import praw
+    import re
+
+    reddit = praw.Reddit(client_id='TcM6ROJWy6s8ig', client_secret='vJ89hRTSvhOiKoHePbBUq5TPf3sHAw',
+                         user_agent='canetoad')
+    all = reddit.subreddit('all')
+
+    image_url_list = []
+
+    from psaw import PushshiftAPI
+
+    api = PushshiftAPI(reddit)
+
+    image_data = [
+        ['image url', 'date taken', 'image size', 'dimensions', 'extension', 'location', 'account', 'description',
+         'date accessed']]
+    while len(image_data)<400:
+        randint = random.randrange(1577836800, 1609459200)
+        print(randint)
+
+        search_results = api.search_submissions(limit=100, before=randint, after=randint-5)
+        for b in search_results:
+            # exclude over 18 content
+            if b.over_18 == True:
+                continue
+            owner = b.author
+            description = b.title
+            date = datetime.utcfromtimestamp(int(b.created_utc))
+            date = date.strftime('%Y-%m-%d %H:%M:%S')
+            date_accessed = datetime.now()
+            date_accessed = date_accessed.strftime('%Y-%m-%d %H:%M:%S')
+
+            dimensions = 'NA'
+            size = 'NA'
+            extension = 'NA'
+            location = 'NA'
+
+            try:
+                # if image urls are in metadata
+                for key in b.media_metadata.keys():
+                    # add image url for each image
+                    image_url = b.media_metadata[key]['s']['u']
+                    size = [b.media_metadata[key]['s']['y'], b.media_metadata[key]['s']['x']]
+
+                    if image_url not in image_url_list:
+                        image_url_list.append(image_url)
+                    else:
+                        continue
+                    print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    image_data.append(
+                        [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    break
+
+
+            # otherwise check if submission url is an image
+            except AttributeError:
+                image_url = b.url
+                # if the url is an image, it will end in .jpg etc, so use regex to check
+                # this will still include some other urls but can be checked later
+                if len(re.findall('\\.\w+$', image_url)) >= 1:
+                    if image_url not in image_url_list:
+                        image_url_list.append(image_url)
+                    else:
+                        continue
+                    print([image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    image_data.append(
+                        [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
+                    break
+            except KeyError:
+                pass
+
+
+    # save image data to file
+    file_name = 'random_reddit'
     with open('image_metadata/' + file_name + '.csv', 'w') as myfile:
         wr = csv.writer(myfile, delimiter=',')
         wr.writerows(image_data)
@@ -494,11 +576,12 @@ def twitter_download(search):
 ###rabbit###
 #ala_download('rabbit')
 #reddit_download('rabbit')
-instagram_download('wildrabbit')
+#instagram_download('wildrabbit')
 #flickr_download('rabbit')
 #inaturalist_download('rabbit')
 #twitter_download('rabbit')
 
 
 ###random###
-#random_download()
+#random_download_flickr()
+random_download_reddit()

@@ -134,6 +134,8 @@ for filename in os.listdir(directory):
 
 for filename in files:
     print(filename)
+    if filename!= 'random_reddit':
+        continue
 
     filename = filename.replace('_saved','')
 

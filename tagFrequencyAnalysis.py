@@ -5,7 +5,7 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import scipy.stats
-os.chdir('..')
+#os.chdir('..')
 
 
 def getTagFreq(images, classifierIndex):
@@ -85,24 +85,22 @@ def tagFrequencyAnalysis(directory, authoritativeFile, randomFile, comparisonFil
                 continue
             randomImages.append(lines)
     randomImages = randomImages[1:]
-    print('random')
-    print(len(randomImages))
-
-    # split authoritative into two randomly
-    authoritativeImagesReference = random.sample(authoritativeImages, int(len(authoritativeImages)/2))
-    authoritativeImagesComparison = [item for item in authoritativeImages if item not in authoritativeImagesReference]
-    print('author1')
-    print(len(authoritativeImagesReference))
-    print('author2')
-    print(len(authoritativeImagesComparison))
 
 
-    tagsRef,freqRef = getTagFreq(authoritativeImagesReference, classifierIndex)
-    tagsAuth,freqAuth = getTagFreq(authoritativeImagesComparison, classifierIndex)
+    # split authoritative images into 10 samples of 50, then find TFD between that and the original 500
+    # find average of this for baseline TFD
+    random.shuffle(authoritativeImages)
+    sample_no = 5
+    baselines = []
+    tagsAuth, freqAuth = getTagFreq(authoritativeImages, classifierIndex)
+    for sampleIndex in range(sample_no):
+        authoritative_sample = authoritativeImages[sampleIndex::sample_no]
+        tagsRef, freqRef = getTagFreq(authoritative_sample, classifierIndex)
+        baselines.append(tagFrequencyDifference(tagsRef, freqRef, tagsAuth, freqAuth))
+    baseline = np.mean(baselines)
+
+
     tagsRand,freqRand = getTagFreq(randomImages, classifierIndex)
-
-
-    baseline = tagFrequencyDifference(tagsRef, freqRef, tagsAuth, freqAuth)
     noise = tagFrequencyDifference(tagsRand, freqRand, tagsAuth, freqAuth)
 
     legend = []
@@ -142,7 +140,7 @@ def tagFrequencyAnalysis(directory, authoritativeFile, randomFile, comparisonFil
         print(verified/(verified+unverified))
 
         legend.append(comparisonFile+' '+str(len(comparisonImages)) +' images')
-        markers = ['o', 'v', 's', 'p', '*']
+        markers = ['o', 'v', 'P', 'p', '*']
         colors = ['','','red', 'green', 'blue', 'orange']
         plt.scatter([percentage],[verified/(verified+unverified)], color = colors[classifierIndex], marker=markers[legend.index(comparisonFile+' '+str(len(comparisonImages)) +' images')])
         xyList.append([percentage, verified/(verified+unverified)])
@@ -166,60 +164,64 @@ def tagFrequencyAnalysis(directory, authoritativeFile, randomFile, comparisonFil
     plt.legend(handles, labels, framealpha=1)
 
 
-# get all csv files
-directory = 'manual_verification/verified images/'
-files = []
-for filename in os.listdir(directory):
-    if filename.endswith(".csv"):
-        files.append(filename.replace('_saved',''))
-    else:
-        continue
 
-files.sort()
-print(files)
-
-comparison = []
-for filename in files:
-
-    if 'rabbit' not in filename and 'rand' not in filename:
-        continue
-    if 'instagram' in filename and 'wild' not in filename:
-        continue
-
-    if 'ala' in filename:
-        # if looking at rabbit, use the validated ala file
-        if 'rabbit' in filename:
-            if 'validated' in filename:
-                authoritative = filename
+if __name__ == '__main__':
+    # get all csv files
+    directory = 'manual_verification/verified images/'
+    files = []
+    for filename in os.listdir(directory):
+        if filename.endswith(".csv"):
+            files.append(filename.replace('_saved',''))
         else:
-            authoritative = filename
-    elif 'random' in filename:
-        rand = filename
-    else:
-        comparison.append(filename)
+            continue
+
+    files.sort()
+    print(files)
+
+    comparison = []
+    for filename in files:
+        if filename=='random_reddit':
+            continue
+
+        if 'rabbit' not in filename and 'rand' not in filename:
+            continue
+        if 'instagram' in filename and 'wild' not in filename:
+            continue
+
+        if 'ala' in filename:
+            # if looking at rabbit, use the validated ala file
+            if 'rabbit' in filename:
+                if 'validated' in filename:
+                    authoritative = filename
+            else:
+                authoritative = filename
+        elif 'random' in filename:
+            rand = filename
+        else:
+            comparison.append(filename)
 
 
-xyList = []
-for classifierIndex in range(2,6):
-    tagFrequencyAnalysis(directory, authoritative, rand, comparison, classifierIndex)
+    xyList = []
+    for classifierIndex in range(2,6):
+        tagFrequencyAnalysis(directory, authoritative, rand, comparison, classifierIndex)
 
 
-# regression
-xyList = np.array(xyList)
-x = list(xyList[:,0])
-y = list(xyList[:,1])
-reg = scipy.stats.linregress(x, y)
-print('Gradient')
-print(reg.slope)
-print('Intercept')
-print(reg.intercept)
-print('R2')
-print(reg.rvalue)
+    # regression
+    xyList = np.array(xyList)
+    x = list(xyList[:,0])
+    y = list(xyList[:,1])
+    reg = scipy.stats.linregress(x, y)
+    print('Gradient')
+    print(reg.slope)
+    print('Intercept')
+    print(reg.intercept)
+    print('R2')
+    print(reg.rvalue)
 
 
-plt.plot([0,1],[0,1])
-plt.ylabel('Observed fraction of desired images')
-plt.xlabel('Predicted fraction of desired images')
-plt.title('Rabbit')
-plt.annotate('y = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0.75,0])
-plt.show()
+    plt.plot([0,1],[0,1])
+    plt.ylabel('Observed fraction of desired images')
+    plt.xlabel('Predicted fraction of desired images')
+    plt.title('Rabbit')
+    plt.annotate('y = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0.25,0.75])
+    plt.show()
