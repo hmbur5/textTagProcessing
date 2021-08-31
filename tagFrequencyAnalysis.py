@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 import os
 import numpy as np
 import scipy.stats
+from sklearn.metrics import r2_score
+
 #os.chdir('..')
 
 
@@ -65,6 +67,8 @@ def tagFrequencyAnalysis(directory, authoritativeFile, randomFile, comparisonFil
     :return:
     '''
     global xyList
+    classifierPredictions = []
+    global classifierR2
 
     authoritativeImages = []
     with open(directory+authoritativeFile, "r") as csv_file:
@@ -144,6 +148,9 @@ def tagFrequencyAnalysis(directory, authoritativeFile, randomFile, comparisonFil
         colors = ['','','red', 'green', 'blue', 'orange']
         plt.scatter([percentage],[verified/(verified+unverified)], color = colors[classifierIndex], marker=markers[legend.index(comparisonFile+' '+str(len(comparisonImages)) +' images')])
         xyList.append([percentage, verified/(verified+unverified)])
+        classifierPredictions.append([percentage, verified / (verified + unverified)])
+    classifierPredictions = np.array(classifierPredictions)
+    classifierR2[header[classifierIndex]] = r2_score(classifierPredictions[:,1], classifierPredictions[:,0])
 
 
     f = lambda m, c: plt.plot([], [], marker=m, color=c, ls="none")[0]
@@ -192,7 +199,11 @@ if __name__ == '__main__':
             # if looking at rabbit, use the validated ala file
             if 'rabbit' in filename:
                 if 'validated' in filename:
+                    pass
                     authoritative = filename
+                else:
+                    pass
+                    #authoritative = filename
             else:
                 authoritative = filename
         elif 'random' in filename:
@@ -202,8 +213,10 @@ if __name__ == '__main__':
 
 
     xyList = []
+    classifierR2 = {}
     for classifierIndex in range(2,6):
         tagFrequencyAnalysis(directory, authoritative, rand, comparison, classifierIndex)
+    print(classifierR2)
 
 
     # regression
@@ -217,11 +230,14 @@ if __name__ == '__main__':
     print(reg.intercept)
     print('R2')
     print(reg.rvalue)
+    print('just R2')
+    print(r2_score(y, x))
 
 
-    plt.plot([0,1],[0,1])
+    plt.plot([0,1],[0,1], color='purple')
+    plt.annotate('Ideal relationship:\ny=x',[0.75,0.3], color='purple')
     plt.ylabel('Observed fraction of desired images')
     plt.xlabel('Predicted fraction of desired images')
     plt.title('Rabbit')
-    plt.annotate('y = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0.25,0.75])
+    #plt.annotate('Line of best fit:\ny = %.2fx + %.2f\nR^2 = %.2f'%(reg.slope, reg.intercept, reg.rvalue),[0.75,0.15])
     plt.show()

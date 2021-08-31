@@ -254,7 +254,7 @@ def ala_download(search):
                 image_data.append(
                     [image_url, date, size, dimensions, extension, location, owner, description, date_accessed])
 
-                if len(image_data)>550:
+                if len(image_data)>1000:
                     break
 
     # save image data to file
@@ -584,4 +584,6 @@ def twitter_download(search):
 
 ###random###
 #random_download_flickr()
-random_download_reddit()
+#random_download_reddit()
+
+ala_download('aus green tree frog')

@@ -20,7 +20,7 @@ for filename in os.listdir(directory):
 
 for file_name in files:
     print(file_name)
-    if file_name!='random_reddit':
+    if 'green tree' not in file_name:
         continue
 
     if 'saved' in file_name:

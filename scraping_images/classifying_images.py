@@ -10,6 +10,7 @@ from google.cloud import vision
 os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = "google_keys.json"
 client = vision.ImageAnnotatorClient()
 def google_object_detection(image_url):
+    return []
     source = types.ImageSource(image_uri=image_url)
     image = types.Image(source=source)
 
@@ -60,6 +61,7 @@ import gluoncv
 import cv2
 import mxnet as mx
 def gluon_labels(image_url):
+    return []
     model_name = 'ResNet50_v1d'
     # download and load the pre-trained model
     net = gluoncv.model_zoo.get_model(model_name, pretrained=True)
@@ -97,6 +99,7 @@ subscription_key = "eb923ba89759461db59d8a5542f54569"
 endpoint = "https://canetoadimageclassification1.cognitiveservices.azure.com/"
 computervision_client = ComputerVisionClient(endpoint, CognitiveServicesCredentials(subscription_key))
 def azure_labels(image_url):
+    return []
     try:
         labels = computervision_client.tag_image(image_url).tags
     except:
@@ -134,7 +137,7 @@ for filename in os.listdir(directory):
 
 for filename in files:
     print(filename)
-    if filename!= 'random_reddit':
+    if 'green tree' not in filename:
         continue
 
     filename = filename.replace('_saved','')
